@@ -147,12 +147,19 @@ button.plus:active{transform:scale(.88);box-shadow:0 0 0 7px rgba(var(--accrgb),
 .avbtn{position:relative;flex:none;width:78px;height:78px;padding:0;border-radius:50%;background:transparent!important;border:2px solid rgba(255,255,255,.6)!important;box-shadow:0 8px 22px rgba(var(--accrgb),.45)!important;overflow:visible}
 .avimg{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
 .avbadge{position:absolute;right:-5px;bottom:-5px;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:13px;background:var(--acc);border:2px solid var(--bg)}
+/* Scanner */
+.frame{transition:border-color .2s,box-shadow .2s}.frame.ok{border-color:#3ddc84;box-shadow:0 0 0 999px rgba(0,0,0,.45),0 0 28px #3ddc84}
+.scanhint{position:absolute;left:14px;right:14px;top:calc(env(safe-area-inset-top,0px) + 16px);text-align:center;color:#fff;font-size:14px;line-height:1.4;text-shadow:0 1px 8px #000,0 0 3px #000;z-index:2;pointer-events:none}
+.scantools{position:absolute;right:14px;top:calc(env(safe-area-inset-top,0px) + 74px);display:flex;flex-direction:column;gap:12px;align-items:flex-end;z-index:2}
+.scantools[hidden],.scantools [hidden]{display:none}
+.scantools button{width:46px;height:46px;border-radius:50%;padding:0;font-size:20px;display:grid;place-items:center;background:rgba(0,0,0,.45)!important;box-shadow:none!important}
+.scantools input[type=range]{width:150px;padding:0;background:transparent;border:0}
 </style></head><body>
 <div id="app"></div>
 <nav><div><button data-a="tab" data-t="diary">Tagebuch</button><button data-a="tab" data-t="hist">Verlauf</button><button data-a="tab" data-t="weight">Gewicht</button><button data-a="tab" data-t="profile">Profil</button></div></nav>
 <div class="modal" id="add" hidden><div class="sheet" id="sh"></div></div>
 <div class="modal" id="scan" hidden>
-  <video id="vid" playsinline muted></video><div class="frame"></div>
+  <video id="vid" playsinline muted></video><div class="frame"></div><div class="scanhint" id="scanhint"></div><div class="scantools" id="scantools" hidden><button class="sec" id="torchbtn" data-a="torch" aria-label="Taschenlampe">💡</button><input type="range" id="zoomr" aria-label="Zoom" hidden></div>
   <div style="padding:14px;background:#000;display:flex;gap:8px"><input id="man" inputmode="numeric" placeholder="Barcode manuell eingeben"><button data-a="manual">OK</button><button class="sec" data-a="closescan">Zu</button></div>
 </div>
 <div id="toast" hidden></div>
@@ -478,22 +485,44 @@ function custom(code){
 
 // Kamera-Scanner
 let stopScan=()=>{$('#scan').hidden=true};
-const loadZX=()=>new Promise((ok,no)=>{if(window.ZXing)return ok();const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';s.onload=ok;s.onerror=no;document.head.appendChild(s)});
+const loadZX=()=>new Promise((ok,no)=>{if(window.ZXing)return ok();const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';s.onload=ok;s.onerror=()=>no(new Error('zx-load'));document.head.appendChild(s)});
+// Prüfziffer (EAN-8, UPC-A, EAN-13, GTIN-14): verwirft Fehllesungen
+function validCode(c){if(!/^\d+$/.test(c)||![8,12,13,14].includes(c.length))return false;const d=c.split('').map(Number),k=d.pop();let sum=0;d.reverse().forEach((v,i)=>sum+=v*(i%2===0?3:1));return(10-sum%10)%10===k}
+async function openCam(){
+  const tries=[{video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}},{video:{facingMode:{ideal:'environment'}}},{video:true}];
+  let st,err;for(const c of tries){try{st=await navigator.mediaDevices.getUserMedia(c);break}catch(e){err=e;if(e.name==='NotAllowedError'||e.name==='SecurityError')break}}
+  if(!st)throw err;
+  const tr=st.getVideoTracks()[0];
+  try{const cap=tr.getCapabilities?tr.getCapabilities():{};if(cap.focusMode&&cap.focusMode.includes('continuous'))await tr.applyConstraints({advanced:[{focusMode:'continuous'}]})}catch(e){}
+  return st}
 async function startScan(){
-  ctx.editId=null;$('#add').hidden=true;$('#scan').hidden=false;let done=false;
-  const hit=c=>{if(done)return;done=true;stopScan();lookup(c)};
+  ctx.editId=null;$('#add').hidden=true;$('#scan').hidden=false;$('.frame').classList.remove('ok');$('#scantools').hidden=true;
+  const hint=$('#scanhint'),H0='Halte den Strichcode ruhig in den Rahmen (ca. 10–20 cm Abstand).';hint.textContent=H0;
+  let on=true,done=false,tip=setTimeout(()=>{if(on)hint.textContent='Tipp: mehr Licht, Code gerade halten, den Abstand leicht ändern. Oder Nummer unten eintippen.'},12000);
+  let st=null;
+  stopScan=()=>{on=false;clearTimeout(tip);try{st&&st.getTracks().forEach(t=>t.stop())}catch(e){}const v=$('#vid');v.srcObject=null;ctx.cam=null;$('#scan').hidden=true};
+  const hit=c=>{if(done)return;done=true;try{navigator.vibrate&&navigator.vibrate(60)}catch(e){}$('.frame').classList.add('ok');setTimeout(()=>{stopScan();lookup(c)},300)};
   try{
-    if('BarcodeDetector' in window){
-      const det=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e']});
-      const st=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}}),v=$('#vid');v.srcObject=st;await v.play();let on=true;
-      stopScan=()=>{on=false;st.getTracks().forEach(t=>t.stop());v.srcObject=null;$('#scan').hidden=true};
-      (async()=>{while(on){try{const r=await det.detect(v);if(r.length)return hit(r[0].rawValue)}catch(e){}await new Promise(r=>setTimeout(r,250))}})();
-    }else{
-      await loadZX();const rd=new ZXing.BrowserMultiFormatReader();
-      stopScan=()=>{try{rd.reset()}catch(e){}$('#scan').hidden=true};
-      rd.decodeFromVideoDevice(null,'vid',r=>{if(r)hit(r.getText())});
-    }
-  }catch(e){toast('Kamera nicht verfügbar. Seite per https öffnen und Zugriff erlauben – oder Code manuell eingeben.')}
+    st=await openCam();const v=$('#vid');v.srcObject=st;await v.play();
+    const tr=st.getVideoTracks()[0],cap=tr.getCapabilities?tr.getCapabilities():{};ctx.cam={tr,torch:false};
+    if(cap.torch||cap.zoom){$('#scantools').hidden=false;$('#torchbtn').hidden=!cap.torch;const z=$('#zoomr');z.hidden=!cap.zoom;if(cap.zoom){z.min=cap.zoom.min;z.max=cap.zoom.max;z.step=cap.zoom.step||.1;z.value=cap.zoom.min;z.oninput=()=>{try{tr.applyConstraints({advanced:[{zoom:+z.value}]})}catch(e){}}}}
+    let det=null,zx=null;
+    if('BarcodeDetector' in window){try{det=new BarcodeDetector({formats:['ean_13','ean_8','upc_a']})}catch(e){}}
+    if(!det){await loadZX();const Hh=new Map();Hh.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[ZXing.BarcodeFormat.EAN_13,ZXing.BarcodeFormat.EAN_8,ZXing.BarcodeFormat.UPC_A]);Hh.set(ZXing.DecodeHintType.TRY_HARDER,true);zx=new ZXing.MultiFormatReader();zx.setHints(Hh)}
+    const cv=document.createElement('canvas'),cx=cv.getContext('2d',{willReadFrequently:true});let n=0;
+    (async()=>{while(on){
+      try{const vw=v.videoWidth,vh=v.videoHeight;
+        if(vw&&!done){let code=null;
+          if(det){const r=await det.detect(v);for(const b of r){if(validCode(b.rawValue)){code=b.rawValue;break}}}
+          else{const full=n++%3===2,sw=full?vw:Math.round(vw*.86),sh=full?vh:Math.round(vh*.42),sx=Math.round((vw-sw)/2),sy=Math.round((vh-sh)/2);
+            cv.width=sw;cv.height=sh;cx.drawImage(v,sx,sy,sw,sh,0,0,sw,sh);
+            try{const r=zx.decode(new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(new ZXing.HTMLCanvasElementLuminanceSource(cv))));const t=r.getText();if(validCode(t))code=t}catch(e){}}
+          if(code){hit(code);return}}
+      }catch(e){}
+      await new Promise(r=>setTimeout(r,det?140:80))}})();
+  }catch(e){
+    clearTimeout(tip);
+    hint.textContent=e&&(e.name==='NotAllowedError'||e.name==='SecurityError')?'Kamerazugriff nicht erlaubt. Erlaube ihn in den Browser-Einstellungen oder tippe die Nummer unten ein.':e&&e.message==='zx-load'?'Der Scanner konnte nicht geladen werden (Internet?). Tippe die Nummer unten ein.':'Kamera nicht verfügbar (Seite per https öffnen?). Tippe die Nummer unten ein.'}
 }
 
 // Aktionen
@@ -516,6 +545,7 @@ const A={
   import:()=>$('#imp').click(),
   avatar:()=>{const f=$('#avf');if(f)f.click()},
   avatarreset:()=>{delete S.avatar;save();render();toast('Standardbild wiederhergestellt.')},
+  torch:()=>{const c=ctx.cam;if(!c)return;c.torch=!c.torch;try{c.tr.applyConstraints({advanced:[{torch:c.torch}]})}catch(e){}$('#torchbtn').style.background=c.torch?'#fff':'';$('#torchbtn').style.color=c.torch?'#000':''},
   toggle:b=>{const k=b.dataset.m;ctx.open=ctx.open||{};ctx.open[k]=!ctx.open[k];const det=b.nextElementSibling;if(det)det.classList.toggle('open',ctx.open[k]);b.setAttribute('aria-expanded',ctx.open[k])},
   tab:b=>{tab=b.dataset.t;if(!S.profile)tab='profile';render();fresh()},
   day:b=>{const d=new Date(date+'T12:00:00');d.setDate(d.getDate()+ +b.dataset.d);date=iso(d);render();fresh()},
