@@ -178,8 +178,10 @@ const ACT=[['1.2','Kaum aktiv (Bürojob)'],['1.375','Leicht aktiv (1–3 Trainin
 function toast(t){const e=$('#toast');e.textContent=t;e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,3200)}
 
 // Zielberechnung: Mifflin-St-Jeor, Mindestgrenze zum Schutz
+function ageOf(bd,ref){const b=new Date(bd+'T12:00:00'),t=ref||new Date();let a=t.getFullYear()-b.getFullYear();const m=t.getMonth()-b.getMonth();if(m<0||(m===0&&t.getDate()<b.getDate()))a--;return a}
+const curAge=p=>p.bd?ageOf(p.bd):p.age;
 function plan(p){
-  const bmr=10*p.w+6.25*p.h-5*p.age+(p.sex==='m'?5:-161),tdee=bmr*p.act;
+  const bmr=10*p.w+6.25*p.h-5*curAge(p)+(p.sex==='m'?5:-161),tdee=bmr*p.act;
   const adj={lose:-500,keep:0,gain:300}[p.goal],min=p.sex==='m'?1500:1200;
   const auto=Math.max(min,R(tdee+adj));
   const kcal=p.custom?Math.max(min,R(p.custom)):auto;
@@ -228,7 +230,7 @@ function vDiary(){
       <div class="det${ctx.open[k]?' open':''}"><div class="det-in">
       ${L.map(x=>`<div class="sw" data-id="${x.id}"><div class="sw-bg"><span>Löschen</span></div><div class="item row sw-fg${fl&&String(fl.id)===String(x.id)?' new':''}"><div class="grow" data-a="edit" data-id="${x.id}" style="cursor:pointer"><b>${esc(x.name)}</b><div class="mut">${esc(x.brand?x.brand+' · ':'')}${x.u?x.q+' '+esc(x.u)+' · ':''}${R(x.g)} ${x.mu==='ml'?'ml':'g'} · ${R(x.p)}P ${R(x.c)}K ${R(x.f)}F</div></div><span>${x.k}</span><button class="x" data-a="del" data-id="${x.id}" aria-label="Löschen">×</button></div></div>`).join('')}
       <div class="row" style="flex-wrap:wrap;padding:4px 0 8px"><button class="ghost" data-a="copy" data-m="${k}">Von gestern</button>${L.length?`<button class="ghost" data-a="dish" data-m="${k}">Als Gericht speichern</button>`:''}</div></div></div></div>`}).join('');
-  return`<div class="row sp"><button class="ghost" data-a="day" data-d="-1" aria-label="Vorheriger Tag">‹</button><div style="text-align:center"><h1 style="margin:0">${today?'Heute':dt.toLocaleDateString('de-DE',{weekday:'short',day:'numeric',month:'short'})}</h1>${S.name?`<div class="mut" style="font-size:13px">${esc(S.name)}</div>`:''}</div><button class="ghost" data-a="day" data-d="1" aria-label="Nächster Tag">›</button></div>
+  return`<div class="row sp"><button class="ghost" data-a="day" data-d="-1" aria-label="Vorheriger Tag">‹</button><div style="text-align:center"><h1 style="margin:0">${today?'Heute':dt.toLocaleDateString('de-DE',{weekday:'short',day:'numeric',month:'short'})}</h1>${S.name?`<div class="mut" style="font-size:13px">${esc(S.name)}</div>`:''}${(()=>{const b=S.profile&&S.profile.bd;if(!b)return'';const n=new Date(),q=new Date(b+'T12:00:00');return n.getMonth()===q.getMonth()&&n.getDate()===q.getDate()?`<div style="font-size:13px;color:var(--acct)">🎂 Alles Gute zum Geburtstag!</div>`:''})()}</div><button class="ghost" data-a="day" data-d="1" aria-label="Nächster Tag">›</button></div>
   <div class="card top" style="margin-top:12px"><div class="hero"><div class="side"><b data-cnt="${R(t.k)}" data-k="eaten">${N(t.k)}</b><span class="mut">Gegessen</span></div>
     <div class="mid">${ring(t.k/pl.kcal,160,11,`<defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--acc2)"/><stop offset="1" style="stop-color:var(--acc)"/></linearGradient></defs><text x="80" y="76" text-anchor="middle" font-size="30" font-weight="700" fill="#fff" data-cnt="${R(left)}" data-k="left" data-abs="1">${N(Math.abs(left))}</text><text x="80" y="100" text-anchor="middle" font-size="13" fill="var(--mut)">${over?'drüber':'Übrig'}</text>`,over,'main')}</div>
     <div class="side"><b>${N(pl.kcal)}</b><span class="mut">Ziel</span></div></div>
@@ -303,8 +305,9 @@ function vProfile(){
   ${pl?`<div class="card top2"><div class="hero2 c4"><div class="side"><b>${N(pl.kcal)}</b><span class="mut">kcal</span></div><div class="side"><b>${pl.prot}</b><span class="mut">Eiweiß g</span></div><div class="side"><b>${pl.carb}</b><span class="mut">Kohlenh. g</span></div><div class="side"><b>${pl.fat}</b><span class="mut">Fett g</span></div></div><div class="mut" style="margin-top:10px;font-size:13px;text-align:center">Gesamtumsatz ca. ${pl.tdee} kcal${pl.clamped||p.custom?` · Ziel nie unter ${pl.min} kcal`:''}</div></div>`:''}
   ${pl?goalCard(p,pl):''}
   <h2 class="sech">Deine Daten</h2><div class="card">
-  <label style="margin-top:0">Name</label><input id="pName" maxlength="30" autocomplete="given-name" value="${esc(S.name||'')}"><div class="grid" style="margin-top:4px"><div><label>Geschlecht</label><select id="pSex"><option value="f" ${p.sex==='f'?'selected':''}>Weiblich</option><option value="m" ${p.sex==='m'?'selected':''}>Männlich</option></select></div><div><label>Alter</label><input id="pAge" type="number" inputmode="numeric" value="${p.age}"></div>
+  <label style="margin-top:0">Name</label><input id="pName" maxlength="30" autocomplete="given-name" value="${esc(S.name||'')}"><div class="grid" style="margin-top:4px"><div><label>Geschlecht</label><select id="pSex"><option value="f" ${p.sex==='f'?'selected':''}>Weiblich</option><option value="m" ${p.sex==='m'?'selected':''}>Männlich</option></select></div><div><label>Geburtsdatum</label><input id="pBd" type="date" value="${p.bd||''}" min="${iso(new Date(new Date().getFullYear()-100,0,1))}" max="${iso(new Date(new Date().getFullYear()-14,new Date().getMonth(),new Date().getDate()))}"></div>
   <div><label>Größe (cm)</label><input id="pH" type="number" inputmode="numeric" value="${p.h}"></div><div><label>Gewicht (kg)</label><input id="pW" type="number" step="0.1" inputmode="decimal" value="${p.w}"></div></div>
+  <div id="ageNote" class="mut" style="font-size:13px;margin-top:6px">${p.bd?'Du bist '+ageOf(p.bd)+' Jahre alt. Das Alter aktualisiert sich automatisch.':(S.profile&&p.age?'Bisher gespeichert: '+p.age+' Jahre. Trage dein Geburtsdatum ein, dann rechnet die App das Alter von selbst.':'Mit deinem Geburtsdatum rechnet die App dein Alter immer automatisch aus.')}</div>
   <label>Aktivität</label><select id="pAct">${sel(ACT,p.act)}</select>
   <label>Ziel</label><select id="pGoal">${sel([['lose','Abnehmen'],['keep','Gewicht halten'],['gain','Zunehmen / Muskelaufbau']],p.goal)}</select>
   <div class="grid"><div><label>Zielgewicht (kg, optional)</label><input id="pTw" type="number" step="0.1" inputmode="decimal" value="${p.tw||''}" placeholder="z. B. 62"></div><div><label>Bis wann? (optional)</label><input id="pTd" type="date" value="${p.td||''}" min="${iso(new Date(Date.now()+864e5))}"></div></div>
@@ -563,8 +566,10 @@ const A={
   wsave:()=>{const w=+$('#wv').value;if(!(w>20&&w<400)){toast('Bitte gültiges Gewicht eingeben.');return}
     S.weights=S.weights.filter(x=>x.d!==date);S.weights.push({d:date,w:R1(w)});if(S.profile)S.profile.w=R1(w);save();render()},
   wdel:b=>{S.weights=S.weights.filter(x=>x.d!==b.dataset.d);save();render()},
-  psave:()=>{const p={sex:$('#pSex').value,age:+$('#pAge').value,h:+$('#pH').value,w:+$('#pW').value,act:+$('#pAct').value,goal:$('#pGoal').value,custom:+$('#pCus').value||0,tw:+$('#pTw').value||0,td:$('#pTd').value||''};
-    if(!(p.age>=14&&p.age<=100&&p.h>100&&p.h<250&&p.w>25&&p.w<400)){toast('Bitte Alter (ab 14), Größe und Gewicht prüfen.');return}
+  psave:()=>{const p={sex:$('#pSex').value,bd:$('#pBd').value||'',h:+$('#pH').value,w:+$('#pW').value,act:+$('#pAct').value,goal:$('#pGoal').value,custom:+$('#pCus').value||0,tw:+$('#pTw').value||0,td:$('#pTd').value||''};
+    if(!p.bd){toast('Bitte trage dein Geburtsdatum ein.');return}
+    p.age=ageOf(p.bd);
+    if(!(p.age>=14&&p.age<=100&&p.h>100&&p.h<250&&p.w>25&&p.w<400)){toast('Bitte Geburtsdatum (ab 14 Jahren), Größe und Gewicht prüfen.');return}
     if(p.tw&&!(p.tw>=30&&p.tw<=300)){toast('Bitte ein Zielgewicht zwischen 30 und 300 kg eingeben.');return}
     if(p.td&&!p.tw){toast('Zum Wunschtermin brauche ich auch dein Zielgewicht.');return}
     const old=S.profile||{};p.sw=p.tw?((old.tw!==p.tw||!old.sw)?p.w:old.sw):0;
@@ -613,6 +618,7 @@ async function pull(){if(!sb||!uid)return;try{const{data}=await sb.from('diary')
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)pull()});
 function setAvatar(file){const r=new FileReader();r.onerror=()=>toast('Bild konnte nicht gelesen werden.');r.onload=()=>{const im=new Image();im.onerror=()=>toast('Dieses Bild kann ich nicht öffnen. Versuche ein JPG oder PNG.');
   im.onload=()=>{const z=256,c=document.createElement('canvas');c.width=c.height=z;const x=c.getContext('2d'),m=Math.min(im.width,im.height);x.fillStyle='#000';x.fillRect(0,0,z,z);x.drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,z,z);S.avatar=c.toDataURL('image/jpeg',.86);save();render();toast('Profilbild gespeichert.')};im.src=r.result};r.readAsDataURL(file)}
+document.addEventListener('input',e=>{if(e.target.id!=='pBd')return;const n=$('#ageNote'),v=e.target.value;if(n&&/^\d{4}-\d\d-\d\d$/.test(v)){const a=ageOf(v);n.textContent=a>=14&&a<=100?'Du bist '+a+' Jahre alt. Das Alter aktualisiert sich automatisch.':'Bitte ein Geburtsdatum für 14 bis 100 Jahre wählen.'}});
 document.addEventListener('change',e=>{if(e.target.id==='avf'&&e.target.files[0]){setAvatar(e.target.files[0]);return}if(e.target.id!=='imp'||!e.target.files[0])return;e.target.files[0].text().then(t=>{try{const j=JSON.parse(t);if(!j.days)throw 0;S=Object.assign({profile:null,days:{},weights:[],recent:[],dishes:[]},j);save();tab=S.profile?'diary':'profile';render();toast('Import fertig.')}catch(x){toast('Datei nicht lesbar.')}})});
 function loginView(){document.querySelector('nav').style.display='none';$('#app').innerHTML=`<h1 style="text-align:center;margin-top:60px">KillCal</h1><div class="card"><label>Name</label><input id="lu" autocapitalize="words" autocomplete="username"><div class="mut" style="margin-top:6px">${CFG.url?'Dein Name ist zugleich dein Anmeldename (klein geschrieben).':''}</div><label>${CFG.url?'Passwort':'Code'}</label><input id="lp" type="password" inputmode="${CFG.url?'text':'numeric'}" autocomplete="current-password"><button data-a="login" style="width:100%;margin-top:14px">Anmelden</button>${CFG.signup?'<button class="sec" data-a="signup" style="width:100%;margin-top:8px">Konto erstellen</button>':''}</div>`}
 async function enter(u){
