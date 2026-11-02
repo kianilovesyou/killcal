@@ -72,6 +72,29 @@ nav button.on{color:#fff}nav button.on::after{transform:scaleX(1)}
 @keyframes grow{from{width:0}}
 @keyframes ring{from{stroke-dasharray:0 400}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+/* ===== Tagebuch im Karten-Look ===== */
+:root{--card:#151416;--line:#2a2830}
+.top{padding:18px 14px 16px}
+.hero{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:4px}
+.side{text-align:center;display:flex;flex-direction:column;gap:2px}.side b{font-size:22px;font-weight:700}
+.mid{display:flex;justify-content:center}
+.macros{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:18px}
+.mc .mut{font-size:13px;white-space:nowrap}.mc .bar{height:6px;margin:6px 0 5px}.mv{font-size:13px;color:var(--ink)}
+.sech{font-size:22px;font-weight:700;margin:22px 2px 10px}
+.card.list{padding:2px 14px}
+.meal+.meal{border-top:1px solid rgba(255,255,255,.08)}
+.mrow{display:flex;align-items:center;gap:14px;padding:14px 0;cursor:pointer;transition:opacity .2s}
+.mrow:active{opacity:.7}
+.mt{font-size:17px;font-weight:700}.chev{color:var(--mut);font-weight:400;display:inline-block;transition:transform .3s var(--ease)}
+.mrow[aria-expanded=true] .chev{transform:rotate(90deg)}
+.nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;margin-top:2px}
+.rng{flex:none;overflow:visible}.meal .rng circle,.list .rng circle{filter:none!important}.rng circle:nth-of-type(2){transition:stroke-dasharray .7s var(--ease)}
+button.plus{flex:none;width:42px;height:42px;border-radius:50%;padding:0;font-size:26px;line-height:1;display:grid;place-items:center;background:#fff!important;color:#000!important;box-shadow:none!important;border:0}
+button.plus:active{transform:scale(.9)}
+button.minus{flex:none;width:42px;height:42px;border-radius:50%;padding:0;font-size:22px;line-height:1;display:grid;place-items:center;background:transparent!important;color:#fff!important;box-shadow:none!important;border:1px solid var(--edge2)}
+.det{display:grid;grid-template-rows:0fr;transition:grid-template-rows .38s var(--ease)}
+.det.open{grid-template-rows:1fr}.det-in{overflow:hidden;min-height:0}
+.det .item:first-child{border-top:1px solid rgba(255,255,255,.08)}
 </style></head><body>
 <div id="app"></div>
 <nav><div><button data-a="tab" data-t="diary">Tagebuch</button><button data-a="tab" data-t="hist">Verlauf</button><button data-a="tab" data-t="weight">Gewicht</button><button data-a="tab" data-t="profile">Profil</button></div></nav>
@@ -111,19 +134,30 @@ function render(){
   $('#app').innerHTML={diary:vDiary,hist:vHist,weight:vWeight,profile:vProfile}[tab]();
   window.scrollTo(0,0);
 }
-function bar(label,v,g,col){return`<div style="margin-top:10px"><div class="row sp mut"><span>${label}</span><span>${R(v)} / ${g} g</span></div><div class="bar"><i style="width:${Math.min(100,g?v/g*100:0)}%;background:${col}"></i></div></div>`}
+const N=n=>Math.round(n).toLocaleString('de-DE');
+const SHARE={b:.25,l:.35,d:.30,s:.10},MICON={b:'🥐',l:'🍝',d:'🍽️',s:'🍎'};
+function ring(fr,size,sw,inner,over){const r=(size-sw)/2-1,C=2*Math.PI*r,c=size/2;
+  return`<svg class="rng" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="${sw}"/><circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="${over?'var(--bad)':'url(#rg)'}" stroke-width="${sw}" stroke-linecap="round" stroke-dasharray="${C*Math.min(1,Math.max(0,fr))} ${C}" transform="rotate(-90 ${c} ${c})"/>${inner||''}</svg>`}
+const macro=(l,v,g)=>`<div class="mc"><div class="mut">${l}</div><div class="bar"><i style="width:${Math.min(100,g?v/g*100:0)}%;background:var(--acc)"></i></div><div class="mv">${R(v)} / ${g} g</div></div>`;
 function vDiary(){
-  const pl=plan(S.profile),d=day(),t=totals(d.items),left=pl.kcal-t.k,fr=Math.min(1,t.k/pl.kcal),C=2*Math.PI*52;
+  const pl=plan(S.profile),d=day(),t=totals(d.items),left=pl.kcal-t.k,over=left<0;
+  ctx.open=ctx.open||{};
   const dt=new Date(date+'T12:00:00'),today=date===iso(new Date());
-  return`${S.name?`<div class="mut" style="text-align:center">Hallo ${esc(S.name)}</div>`:''}<div class="row sp"><button class="ghost" data-a="day" data-d="-1">‹</button><h1 style="margin:0">${today?'Heute':dt.toLocaleDateString('de-DE',{weekday:'short',day:'numeric',month:'short'})}</h1><button class="ghost" data-a="day" data-d="1">›</button></div>
-  <div class="card" style="margin-top:12px"><div class="row">
-   <svg width="130" height="130" viewBox="0 0 130 130"><circle cx="65" cy="65" r="52" fill="none" stroke="var(--line)" stroke-width="12"/><circle cx="65" cy="65" r="52" fill="none" stroke="${left<0?'var(--bad)':'var(--acc)'}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${C*fr} ${C}" transform="rotate(-90 65 65)"/><text x="65" y="64" text-anchor="middle" font-size="26" font-weight="700" fill="var(--ink)">${Math.abs(R(left))}</text><text x="65" y="84" text-anchor="middle" font-size="12" fill="var(--mut)">${left<0?'kcal drüber':'kcal übrig'}</text></svg>
-   <div class="grow mut">Ziel ${pl.kcal} kcal<br>Gegessen ${R(t.k)} kcal</div></div>
-   ${bar('Eiweiß',t.p,pl.prot,'var(--p)')}${bar('Kohlenhydrate',t.c,pl.carb,'var(--c)')}${bar('Fett',t.f,pl.fat,'var(--f)')}</div>
-  ${MEALS.map(([k,n])=>{const L=d.items.filter(x=>x.meal===k),s=L.reduce((a,x)=>a+x.k,0);return`<div class="card"><div class="row sp"><h2>${n}</h2><span class="mut">${R(s)} kcal</span></div>
-   ${L.map(x=>`<div class="item row"><div class="grow" data-a="edit" data-id="${x.id}" style="cursor:pointer"><b>${esc(x.name)}</b><div class="mut">${esc(x.brand?x.brand+' · ':'')}${x.u?x.q+' '+esc(x.u)+' · ':''}${R(x.g)} ${x.mu==='ml'?'ml':'g'} · ${R(x.p)}P ${R(x.c)}K ${R(x.f)}F</div></div><span>${x.k}</span><button class="x" data-a="del" data-id="${x.id}" aria-label="Löschen">×</button></div>`).join('')}
-   <div class="row" style="flex-wrap:wrap;margin-top:6px"><button class="ghost" data-a="add" data-m="${k}">+ Hinzufügen</button><button class="ghost" data-a="copy" data-m="${k}">Von gestern</button>${L.length?`<button class="ghost" data-a="dish" data-m="${k}">Als Gericht speichern</button>`:''}</div></div>`}).join('')}
-  <div class="card row sp"><div><h2>Wasser</h2><div class="mut">${d.water} / 2000 ml</div></div><div class="row"><button class="sec" data-a="water" data-v="-250">−</button><button data-a="water" data-v="250">+250 ml</button></div></div>`;
+  const meals=MEALS.map(([k,n])=>{const L=d.items.filter(x=>x.meal===k),sum=L.reduce((a,x)=>a+x.k,0),tg=R(pl.kcal*SHARE[k]),names=L.map(x=>x.name).join(', ');
+    return`<div class="meal"><div class="mrow" data-a="toggle" data-m="${k}" role="button" tabindex="0" aria-expanded="${!!ctx.open[k]}">
+      ${ring(sum/tg,50,4,`<text x="25" y="25" text-anchor="middle" dominant-baseline="central" font-size="20">${MICON[k]}</text>`,sum>tg*1.15)}
+      <div class="grow"><div class="mt">${n} <span class="chev">›</span></div><div class="mut">${R(sum)} / ${tg} kcal</div>${names?`<div class="mut nm">${esc(names)}</div>`:''}</div>
+      <button class="plus" data-a="add" data-m="${k}" aria-label="${n}: Lebensmittel hinzufügen">+</button></div>
+      <div class="det${ctx.open[k]?' open':''}"><div class="det-in">
+      ${L.map(x=>`<div class="item row"><div class="grow" data-a="edit" data-id="${x.id}" style="cursor:pointer"><b>${esc(x.name)}</b><div class="mut">${esc(x.brand?x.brand+' · ':'')}${x.u?x.q+' '+esc(x.u)+' · ':''}${R(x.g)} ${x.mu==='ml'?'ml':'g'} · ${R(x.p)}P ${R(x.c)}K ${R(x.f)}F</div></div><span>${x.k}</span><button class="x" data-a="del" data-id="${x.id}" aria-label="Löschen">×</button></div>`).join('')}
+      <div class="row" style="flex-wrap:wrap;padding:4px 0 8px"><button class="ghost" data-a="copy" data-m="${k}">Von gestern</button>${L.length?`<button class="ghost" data-a="dish" data-m="${k}">Als Gericht speichern</button>`:''}</div></div></div></div>`}).join('');
+  return`<div class="row sp"><button class="ghost" data-a="day" data-d="-1" aria-label="Vorheriger Tag">‹</button><div style="text-align:center"><h1 style="margin:0">${today?'Heute':dt.toLocaleDateString('de-DE',{weekday:'short',day:'numeric',month:'short'})}</h1>${S.name?`<div class="mut" style="font-size:13px">${esc(S.name)}</div>`:''}</div><button class="ghost" data-a="day" data-d="1" aria-label="Nächster Tag">›</button></div>
+  <div class="card top" style="margin-top:12px"><div class="hero"><div class="side"><b>${N(t.k)}</b><span class="mut">Gegessen</span></div>
+    <div class="mid">${ring(t.k/pl.kcal,160,11,`<defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c46bff"/><stop offset="1" stop-color="#9E13FF"/></linearGradient></defs><text x="80" y="76" text-anchor="middle" font-size="30" font-weight="700" fill="#fff">${N(Math.abs(left))}</text><text x="80" y="100" text-anchor="middle" font-size="13" fill="var(--mut)">${over?'drüber':'Übrig'}</text>`,over)}</div>
+    <div class="side"><b>${N(pl.kcal)}</b><span class="mut">Ziel</span></div></div>
+    <div class="macros">${macro('Kohlenhydrate',t.c,pl.carb)}${macro('Eiweiß',t.p,pl.prot)}${macro('Fett',t.f,pl.fat)}</div></div>
+  <h2 class="sech">Ernährung</h2><div class="card list">${meals}</div>
+  <h2 class="sech">Wasser</h2><div class="card list"><div class="mrow" style="cursor:default">${ring(d.water/2000,50,4,`<text x="25" y="25" text-anchor="middle" dominant-baseline="central" font-size="20">💧</text>`)}<div class="grow"><div class="mt">Wasser</div><div class="mut">${d.water} / 2000 ml</div></div><button class="minus" data-a="water" data-v="-250" aria-label="250 ml weniger">−</button><button class="plus" data-a="water" data-v="250" aria-label="250 ml mehr">+</button></div></div>`;
 }
 function vHist(){
   const pl=plan(S.profile),rows=[];
@@ -361,6 +395,7 @@ const A={
     const{data,error}=await sb.auth.signInWithPassword({email:u+'@killcal.app',password:p});if(error){toast('Anmeldung fehlgeschlagen: Name oder Passwort falsch.');return}enter(data.user)},
   logout:async()=>{if(sb){try{localStorage.removeItem(KEY())}catch(e){}await sb.auth.signOut()}try{localStorage.removeItem(SESS)}catch(e){}uid=null;uname='';S={profile:null,days:{},weights:[],recent:[],dishes:[]};loginView()},
   import:()=>$('#imp').click(),
+  toggle:b=>{const k=b.dataset.m;ctx.open=ctx.open||{};ctx.open[k]=!ctx.open[k];const det=b.nextElementSibling;if(det)det.classList.toggle('open',ctx.open[k]);b.setAttribute('aria-expanded',ctx.open[k])},
   tab:b=>{tab=b.dataset.t;if(!S.profile)tab='profile';render();fresh()},
   day:b=>{const d=new Date(date+'T12:00:00');d.setDate(d.getDate()+ +b.dataset.d);date=iso(d);render();fresh()},
   add:b=>openAdd(b.dataset.m),closeadd:()=>{ctx.editId=null;$('#add').hidden=true},back:()=>sheetSearch(),
@@ -382,7 +417,7 @@ const A={
   export:()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S)],{type:'application/json'}));a.download='killcal-daten.json';a.click()}
 };
 document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(b&&A[b.dataset.a])A[b.dataset.a](b)});
-document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='man')A.manual();if(e.key==='Enter'&&e.target.id==='lp')A.login()});
+document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList&&e.target.classList.contains('mrow')){e.preventDefault();A.toggle(e.target)}if(e.key==='Enter'&&e.target.id==='man')A.manual();if(e.key==='Enter'&&e.target.id==='lp')A.login()});
 // ===== Konto & Sync (Supabase). Hier nach dem Einrichten eintragen: =====
 const CFG={url:'',key:'',signup:false}; // signup:true zeigt „Konto erstellen“ (nur kurz zum Anlegen der Konten, danach wieder false)
 const slug=v=>v.trim().toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/[^a-z0-9._-]/g,'');   // Project URL und anon/public key – NIE den service_role key!
