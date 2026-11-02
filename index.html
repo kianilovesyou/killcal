@@ -35,6 +35,43 @@ nav div{display:flex;width:100%;max-width:480px}nav button{flex:1;background:tra
 .frame{position:absolute;left:12%;right:12%;top:30%;height:26%;border:3px solid #fff;border-radius:14px;box-shadow:0 0 0 999px rgba(0,0,0,.35);pointer-events:none}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 80px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;z-index:40;font-size:14px;max-width:90%}
 #toast[hidden]{display:none}
+/* ===== Feinschliff: weiße Konturen, sanfte Bewegung ===== */
+:root{--edge:rgba(255,255,255,.14);--edge2:rgba(255,255,255,.5);--ease:cubic-bezier(.2,.8,.2,1)}
+html{background:#000}
+body{background:radial-gradient(120% 55% at 50% -12%,rgba(158,19,255,.26),transparent 62%) no-repeat,#000;min-height:100vh}
+h1{letter-spacing:-.01em}
+.card{border:1px solid var(--edge);border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015)),var(--card);box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
+.item{border-top-color:rgba(255,255,255,.08)}
+input,select{border:1px solid var(--edge);transition:border-color .2s,box-shadow .25s var(--ease),background-color .2s}
+input:focus,select:focus{outline:none;border-color:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.14)}
+button{border:1px solid transparent;transition:transform .2s var(--ease),filter .2s,background-color .2s,border-color .2s,box-shadow .25s var(--ease),opacity .2s;-webkit-user-select:none;user-select:none}
+button:not(.ghost):not(.x):not(.sec){box-shadow:inset 0 0 0 1px rgba(255,255,255,.22),0 8px 22px rgba(158,19,255,.32)}
+button.sec{background:transparent;color:#fff;border-color:var(--edge2)}
+button:active{transform:scale(.96)}
+button:focus-visible,[data-a]:focus-visible{outline:2px solid #fff;outline-offset:2px}
+@media(hover:hover){button:hover{filter:brightness(1.14)}button.sec:hover{border-color:#fff}.item[data-a]:hover{background:rgba(255,255,255,.04)}}
+.item[data-a]{transition:background-color .2s,transform .2s var(--ease);border-radius:10px}
+.item[data-a]:active{background:rgba(255,255,255,.08);transform:scale(.985)}
+.bar{background:rgba(255,255,255,.1)}.bar i{transition:width .6s var(--ease)}
+circle[stroke-linecap]{filter:drop-shadow(0 0 7px rgba(158,19,255,.7))}
+nav{background:rgba(10,8,16,.82);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--edge)}
+nav button{box-shadow:none!important;background:transparent!important;position:relative;border:0;transition:color .25s,transform .2s var(--ease)}
+nav button::after{content:"";position:absolute;left:32%;right:32%;top:-1px;height:2px;border-radius:2px;background:#fff;transform:scaleX(0);transition:transform .35s var(--ease)}
+nav button.on{color:#fff}nav button.on::after{transform:scaleX(1)}
+.modal{animation:fade .22s ease both}
+.sheet{border:1px solid var(--edge);border-bottom:0;animation:up .34s var(--ease) both}
+#toast{animation:pop .28s var(--ease) both}
+.fresh>*{animation:rise .42s var(--ease) both}
+.fresh>*:nth-child(2){animation-delay:.04s}.fresh>*:nth-child(3){animation-delay:.08s}.fresh>*:nth-child(4){animation-delay:.12s}.fresh>*:nth-child(5){animation-delay:.16s}.fresh>*:nth-child(n+6){animation-delay:.2s}
+.fresh .bar i{animation:grow .8s var(--ease) both}
+.fresh circle[stroke-linecap]{animation:ring 1s var(--ease) both}
+@keyframes fade{from{opacity:0}}
+@keyframes up{from{transform:translateY(40px);opacity:.4}}
+@keyframes pop{from{opacity:0;transform:translate(-50%,10px)}}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}}
+@keyframes grow{from{width:0}}
+@keyframes ring{from{stroke-dasharray:0 400}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style></head><body>
 <div id="app"></div>
 <nav><div><button data-a="tab" data-t="diary">Tagebuch</button><button data-a="tab" data-t="hist">Verlauf</button><button data-a="tab" data-t="weight">Gewicht</button><button data-a="tab" data-t="profile">Profil</button></div></nav>
@@ -84,7 +121,7 @@ function vDiary(){
    <div class="grow mut">Ziel ${pl.kcal} kcal<br>Gegessen ${R(t.k)} kcal</div></div>
    ${bar('Eiweiß',t.p,pl.prot,'var(--p)')}${bar('Kohlenhydrate',t.c,pl.carb,'var(--c)')}${bar('Fett',t.f,pl.fat,'var(--f)')}</div>
   ${MEALS.map(([k,n])=>{const L=d.items.filter(x=>x.meal===k),s=L.reduce((a,x)=>a+x.k,0);return`<div class="card"><div class="row sp"><h2>${n}</h2><span class="mut">${R(s)} kcal</span></div>
-   ${L.map(x=>`<div class="item row"><div class="grow" data-a="edit" data-id="${x.id}" style="cursor:pointer"><b>${esc(x.name)}</b><div class="mut">${esc(x.brand?x.brand+' · ':'')}${x.g} g · ${R(x.p)}P ${R(x.c)}K ${R(x.f)}F</div></div><span>${x.k}</span><button class="x" data-a="del" data-id="${x.id}" aria-label="Löschen">×</button></div>`).join('')}
+   ${L.map(x=>`<div class="item row"><div class="grow" data-a="edit" data-id="${x.id}" style="cursor:pointer"><b>${esc(x.name)}</b><div class="mut">${esc(x.brand?x.brand+' · ':'')}${x.u?x.q+' '+esc(x.u)+' · ':''}${R(x.g)} ${x.mu==='ml'?'ml':'g'} · ${R(x.p)}P ${R(x.c)}K ${R(x.f)}F</div></div><span>${x.k}</span><button class="x" data-a="del" data-id="${x.id}" aria-label="Löschen">×</button></div>`).join('')}
    <div class="row" style="flex-wrap:wrap;margin-top:6px"><button class="ghost" data-a="add" data-m="${k}">+ Hinzufügen</button><button class="ghost" data-a="copy" data-m="${k}">Von gestern</button>${L.length?`<button class="ghost" data-a="dish" data-m="${k}">Als Gericht speichern</button>`:''}</div></div>`}).join('')}
   <div class="card row sp"><div><h2>Wasser</h2><div class="mut">${d.water} / 2000 ml</div></div><div class="row"><button class="sec" data-a="water" data-v="-250">−</button><button data-a="water" data-v="250">+250 ml</button></div></div>`;
 }
@@ -120,46 +157,169 @@ function vProfile(){
 }
 
 // Hinzufügen
-function openAdd(m){ctx.meal=m;ctx.food=null;$('#add').hidden=false;sheetSearch()}
+// Grundnahrungsmittel: Näherungswerte pro 100 g (eigene Richtwerte, keine amtliche Tabelle)
+// Format: Name|Suchbegriffe|kcal|Eiweiß|Kohlenhydrate|Fett|Einheit|Gramm pro Einheit
+const BASIC=`Ei (Hühnerei, Größe M)|eier,ei,vollei|143|12.6|0.7|9.5|Stück|55
+Eiweiß (Hühnerei)|eiklar|52|10.9|0.7|0.2|Stück|33
+Eigelb (Hühnerei)|dotter|322|15.9|3.6|26.5|Stück|18
+Milch 3,5 % (Vollmilch)|milch|65|3.4|4.8|3.7|Glas (200 ml)|200
+Milch 1,5 %|milch fettarm|47|3.4|4.9|1.5|Glas (200 ml)|200
+Naturjoghurt 3,5 %|joghurt|66|3.5|4.7|3.8|Becher (150 g)|150
+Naturjoghurt 1,5 %|joghurt fettarm|47|3.4|4.7|1.5|Becher (150 g)|150
+Griechischer Joghurt 10 %|joghurt|130|5.5|4|10|Becher (150 g)|150
+Skyr natur|quark joghurt|63|11|4|0.2|Becher (150 g)|150
+Magerquark|quark|67|12|4|0.3|EL|25
+Speisequark 20 % Fett i. Tr.|quark|100|12|3.5|5|EL|25
+Frischkäse Doppelrahm|frischkäse|330|5.5|3|32|EL|20
+Gouda|käse|356|25|0.1|28|Scheibe|25
+Emmentaler|käse|380|28|0.4|30|Scheibe|25
+Mozzarella|käse|250|18|1|19|Kugel (125 g)|125
+Parmesan|käse|392|36|0|28|EL|8
+Butter|butter|741|0.7|0.6|82|TL|5
+Schlagsahne 30 %|sahne|292|2.4|3.3|30|EL|15
+Hähnchenbrustfilet roh|hähnchen,huhn,geflügel|106|23|0|1.2|Filet|150
+Rinderhackfleisch|hack|215|19|0|15|Portion|125
+Hackfleisch gemischt|hack,schwein|260|17|0|21|Portion|125
+Lachsfilet roh|lachs,fisch|200|20|0|13|Filet|150
+Thunfisch im eigenen Saft|thunfisch,dose,fisch|116|25.5|0|1|Dose (abgetropft)|120
+Kochschinken|schinken,wurst|110|19|1|3.5|Scheibe|20
+Apfel|äpfel|52|0.3|12|0.4|Stück|170
+Banane|bananen|90|1.1|20|0.2|Stück (ohne Schale)|110
+Orange|orangen|47|0.9|9|0.2|Stück|140
+Mandarine|mandarinen,clementine|46|0.7|10|0.3|Stück|60
+Birne|birnen|55|0.4|12.4|0.3|Stück|150
+Erdbeeren|erdbeere|32|0.7|5.5|0.4|Handvoll|100
+Weintrauben|trauben|68|0.7|16|0.2|Handvoll|100
+Blaubeeren|heidelbeeren|42|0.6|9|0.6|Handvoll|80
+Himbeeren|himbeere|36|1.3|4.8|0.3|Handvoll|80
+Kiwi|kiwis|56|1|11.5|0.6|Stück|75
+Ananas|ananas|55|0.5|12|0.2|Scheibe|80
+Avocado|avocados|160|2|2|15|Stück|150
+Tomate|tomaten|18|0.9|2.6|0.2|Stück|100
+Gurke|salatgurke|12|0.6|1.8|0.2|Stück|350
+Paprika|paprikaschote|26|1|4.6|0.3|Stück|150
+Karotte|möhre,möhren,karotten|36|0.9|7|0.2|Stück|80
+Zwiebel|zwiebeln|28|1.2|5|0.2|Stück|80
+Kartoffeln roh|kartoffel|71|2|14.8|0.1|Stück (mittel)|90
+Süßkartoffel|batate|86|1.6|20|0.1|Stück|200
+Brokkoli|broccoli|34|3.3|2.7|0.4|Portion|150
+Spinat|blattspinat|23|2.5|0.6|0.4|Portion|150
+Zucchini|zucchini|19|1.6|2|0.4|Stück|200
+Champignons|pilze|22|2.7|0.5|0.3|Stück|20
+Haferflocken|hafer|372|13.5|59|7|EL|10
+Reis roh|reis|350|7|77|0.6|Portion (roh)|75
+Reis gekocht|reis|130|2.7|28|0.3|Portion|180
+Nudeln roh|pasta,spaghetti,makkaroni|355|12.5|70|1.5|Portion (roh)|100
+Nudeln gekocht|pasta,spaghetti|158|5.8|31|0.9|Portion|250
+Vollkornbrot|brot|210|7|38|1.5|Scheibe|50
+Mischbrot|brot|224|7.5|44|1.2|Scheibe|50
+Toastbrot|toast,brot|265|8|49|3|Scheibe|25
+Brötchen (Weizen)|semmel,weizenbrötchen,brot|265|9|52|1.5|Stück|55
+Knäckebrot|knäcke|340|10|64|1.5|Scheibe|10
+Müsli ungesüßt|müsli,muesli|370|10|60|7|Portion|50
+Cornflakes|corn flakes|375|7.5|84|0.9|Portion|30
+Mandeln|mandel,nüsse|580|21|9|50|Handvoll|25
+Walnüsse|walnuss,nüsse|670|15|7|64|Handvoll|30
+Erdnüsse|erdnuss,nüsse|590|26|8|49|Handvoll|30
+Erdnussbutter|erdnussmus|600|25|12|50|EL|15
+Tofu natur|tofu|120|13|1|7|Scheibe|50
+Olivenöl|öl|884|0|0|100|EL|10
+Zucker|haushaltszucker|400|0|100|0|TL|5
+Honig|honig|306|0.4|75|0|TL|7
+Marmelade|konfitüre|250|0.4|60|0.1|TL|10
+Vollmilchschokolade|schokolade|535|7.5|57|30|Rippe|10
+Kartoffelchips|chips|540|6|50|34|Handvoll|30
+Cola|coca cola,limo|42|0|10.6|0|Dose (330 ml)|330
+Orangensaft|saft|45|0.7|10|0.2|Glas (200 ml)|200
+Apfelschorle|schorle|22|0|5.3|0|Glas (250 ml)|250
+Bier (Pils)|bier|43|0.4|3.1|0|Flasche (0,5 l)|500
+Weißwein|wein|72|0.1|2.5|0|Glas (150 ml)|150
+Rotwein|wein|75|0.1|2.5|0|Glas (150 ml)|150
+Kaffee schwarz|kaffee|2|0.2|0.3|0|Tasse (200 ml)|200
+Hafermilch|haferdrink|45|0.7|6.5|1.5|Glas (200 ml)|200
+Sojadrink ungesüßt|sojamilch,soja|39|3.3|0.6|1.9|Glas (200 ml)|200`.split('\n').map(l=>{const a=l.split('|');return{name:a[0],al:a[1]||'',k:+a[2],p:+a[3],c:+a[4],f:+a[5],u:a[6],ug:+a[7],brand:'Richtwert',basic:1,s:0}});
+const nz=s=>String(s||'').toLowerCase().replace(/ä/g,'a').replace(/ö/g,'o').replace(/ü/g,'u').replace(/ß/g,'ss');
+const stem=w=>w.length>4?w.replace(/(en|er|n|e|s)$/,''):w;
+const words=s=>nz(s).split(/[^a-z0-9]+/).filter(Boolean);
+function localSearch(q){
+  const qt=words(q).map(stem);if(!qt.length)return[];
+  return BASIC.map(f=>{const nw=words(f.name+' '+f.al).map(stem);let sc=0;
+    for(const t of qt){if(nw.includes(t))sc+=3;else if(nw.some(w=>w.startsWith(t)))sc+=2;else return null}
+    if(stem(words(f.name)[0])===qt[0])sc+=3;return{f,sc}}).filter(Boolean)
+    .sort((a,b)=>b.sc-a.sc||a.f.name.length-b.f.name.length).slice(0,8).map(x=>x.f)}
+const FIELDS='code,product_name,brands,nutriments,serving_quantity';
+const str=v=>Array.isArray(v)?String(v[0]||''):(v&&typeof v==='object'?String(v.de||v.main||Object.values(v)[0]||''):String(v||''));
+function norm(p){const n=p.nutriments||{},k=n['energy-kcal_100g']??(n.energy_100g?n.energy_100g/4.184:null),name=str(p.product_name).trim();
+  if(!name||k==null)return null;const P=+n.proteins_100g||0,C=+n.carbohydrates_100g||0,F=+n.fat_100g||0;
+  if(!(k>=0&&k<=950)||P+C+F>105)return null;const s=+p.serving_quantity||0;
+  return{name,brand:str(p.brands).split(',')[0].trim(),k:+k,p:P,c:C,f:F,s,u:s>0?'Portion':'',ug:s,code:p.code}}
+// Treffer filtern und nach Relevanz sortieren: alle Suchwörter müssen vorkommen, Namens-Treffer zählen mehr
+function rank(L,q){const qt=words(q).map(stem),seen={};
+  return L.map((f,i)=>{const nw=words(f.name).map(stem),all=words(f.name+' '+f.brand).map(stem);
+    if(!qt.every(t=>all.some(w=>w.startsWith(t))))return null;
+    const key=nz(f.name+f.brand);if(seen[key])return null;seen[key]=1;
+    let sc=0;qt.forEach(t=>{if(nw.includes(t))sc+=2;else if(nw.some(w=>w.startsWith(t)))sc+=1});
+    if(nw[0]&&nw[0].startsWith(qt[0]))sc+=2;
+    return{f,sc:sc-nw.length*.15-i*.02}}).filter(Boolean).sort((a,b)=>b.sc-a.sc).map(x=>x.f)}
+async function getJSON(url,ms=8000){const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);
+  try{const r=await fetch(url,{signal:c.signal});if(!r.ok)throw new Error(r.status);return await r.json()}finally{clearTimeout(t)}}
+const qcache={};
+async function offSearch(q){
+  if(qcache[q])return qcache[q];const e=encodeURIComponent(q);let err;
+  const urls=[`https://search.openfoodfacts.org/search?q=${e}&langs=de,en&page_size=40&fields=${FIELDS}`,
+    `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${e}&search_simple=1&action=process&json=1&page_size=40&lc=de&sort_by=unique_scans_n&fields=${FIELDS}`];
+  for(const u of urls){try{const j=await getJSON(u),L=rank((j.hits||j.products||[]).map(norm).filter(Boolean),q);if(L.length){qcache[q]=L;return L}}catch(x){err=x}}
+  if(err)throw err;return[]}
+const resRow=(f,i)=>`<div class="item row" data-a="pick" data-i="${i}" style="cursor:pointer"><div class="grow"><b>${esc(f.name)}</b><div class="mut">${esc(f.brand)}${f.u&&f.ug>0?(f.brand?' · ':'')+'1 '+esc(f.u)+' = '+R(f.ug)+' g':''}</div></div><span class="mut">${R(f.k)} kcal/100 g</span></div>`;
+function showRes(q,prods,status){
+  const box=$('#res');if(!box)return;
+  const qt=words(q).map(stem),mine=[...(S.dishes||[]),...S.recent].filter(f=>!qt.length||qt.every(t=>words(f.name+' '+f.brand).map(stem).some(w=>w.startsWith(t))));
+  const B=q?localSearch(q):[];prods=prods||[];ctx.list=[...mine,...B,...prods];let i=0;
+  const sec=(t,L)=>L.length?`<div class="mut" style="margin-top:10px">${t}</div>`+L.map(f=>resRow(f,i++)).join(''):'';
+  box.innerHTML=sec(q?'Meine Gerichte & zuletzt':'Meine Gerichte & zuletzt verwendet',mine)+sec('Grundnahrungsmittel (Richtwerte)',B)+sec('Produkte (Open Food Facts)',prods)+(status||'');
+}
+let qid=0;
+function openAdd(m){ctx.meal=m;ctx.food=null;ctx.editId=null;$('#add').hidden=false;sheetSearch()}
 function sheetSearch(){
   $('#sh').innerHTML=`<div class="row sp"><h2>Lebensmittel hinzufügen</h2><button class="x" data-a="closeadd">×</button></div>
-  <div class="row" style="margin-top:10px"><input id="q" type="search" placeholder="Produkt suchen (z. B. Haferflocken)"><button data-a="startscan">📷 Scan</button></div>
+  <div class="row" style="margin-top:10px"><input id="q" type="search" placeholder="Suchen (z. B. Eier, Banane, Skyr)"><button data-a="startscan">📷 Scan</button></div>
   <div class="row" style="margin:8px 0"><button class="ghost" data-a="custom">+ Eigenes Lebensmittel</button></div><div id="res"></div><p class="mut" style="font-size:12px;margin-top:12px">Produktdaten: Open Food Facts (ODbL)</p>`;
-  showList([...(S.dishes||[]),...S.recent],'Meine Gerichte & zuletzt verwendet');
-  $('#q').addEventListener('input',e=>{clearTimeout(sheetSearch.t);const q=e.target.value.trim();if(q.length<2){showList([...(S.dishes||[]),...S.recent],'Meine Gerichte & zuletzt verwendet');return}sheetSearch.t=setTimeout(()=>search(q),450)});
+  showRes('');
+  $('#q').addEventListener('input',e=>{clearTimeout(sheetSearch.t);const q=e.target.value.trim();qid++;if(q.length<2){showRes('');return}
+    showRes(q,[],'<p class="mut">Suche Produkte …</p>');sheetSearch.t=setTimeout(()=>search(q),400)});
 }
-function showList(L,title){
-  ctx.list=L;$('#res').innerHTML=(title&&L.length?`<div class="mut">${title}</div>`:'')+L.map((f,i)=>`<div class="item row" data-a="pick" data-i="${i}" style="cursor:pointer"><div class="grow"><b>${esc(f.name)}</b><div class="mut">${esc(f.brand)}</div></div><span class="mut">${R(f.k)} kcal/100 g</span></div>`).join('')||(title?'':'<p class="mut">Nichts gefunden. Lege das Produkt unter „Eigenes Lebensmittel“ an.</p>');
-}
-const FIELDS='code,product_name,brands,nutriments,serving_quantity';
-function norm(p){const n=p.nutriments||{},k=n['energy-kcal_100g']??(n.energy_100g?n.energy_100g/4.184:null);if(!p.product_name||k==null)return null;
-  return{name:p.product_name,brand:(p.brands||'').split(',')[0],k:+k,p:+n.proteins_100g||0,c:+n.carbohydrates_100g||0,f:+n.fat_100g||0,s:+p.serving_quantity||0,code:p.code}}
 async function search(q){
-  $('#res').innerHTML='<p class="mut">Suche in Open Food Facts …</p>';
-  try{const r=await fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=25&lc=de&fields=${FIELDS}`);
-    const j=await r.json();showList((j.products||[]).map(norm).filter(Boolean),'');
-  }catch(e){$('#res').innerHTML='<p class="mut">Keine Verbindung zur Datenbank. Prüfe dein Internet.</p>'}
+  const id=++qid;
+  try{const L=await offSearch(q);if(id!==qid)return;showRes(q,L,L.length||localSearch(q).length?'':'<p class="mut">Nichts gefunden. Versuche ein anderes Wort oder lege es unter „Eigenes Lebensmittel“ an.</p>')}
+  catch(e){if(id!==qid)return;showRes(q,[],'<p class="mut">Die Produktdatenbank antwortet gerade nicht. Grundnahrungsmittel funktionieren trotzdem. <button class="ghost" data-a="retry">Nochmal versuchen</button></p>')}
 }
 async function lookup(code){
-  toast('Suche Barcode '+code+' …');
-  try{const r=await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=${FIELDS}`);const j=await r.json();
-    const f=j.status===1&&norm(j.product);
-    if(f){$('#add').hidden=false;pick(f)}else{toast('Produkt nicht in der Datenbank – lege es selbst an.');$('#add').hidden=false;custom(code)}
-  }catch(e){toast('Keine Verbindung zur Datenbank.')}
+  toast('Suche Barcode '+code+' …');let f=null,fail=false;const c=encodeURIComponent(code);
+  for(const u of [`https://world.openfoodfacts.org/api/v2/product/${c}.json?fields=${FIELDS}`,`https://world.openfoodfacts.org/api/v0/product/${c}.json?fields=${FIELDS}`]){
+    try{const j=await getJSON(u,9000);f=(j.status===1&&norm(j.product))||null;fail=false;break}catch(e){fail=true}}
+  if(fail){toast('Datenbank antwortet nicht. Bitte nochmal scannen.');return}
+  $('#add').hidden=false;if(f)pick(f);else{toast('Produkt nicht oder ohne Nährwerte in der Datenbank – lege es selbst an.');custom(code)}
 }
 function pick(f){
-  ctx.food=f;const g=f.g||f.s||100;
+  ctx.food=f;const hasU=!!(f.u&&f.ug>0);
   $('#sh').innerHTML=`<div class="row sp"><h2>${esc(f.name)}</h2><button class="x" data-a="back">‹</button></div><div class="mut">${esc(f.brand)} · pro 100 g: ${R(f.k)} kcal, ${R1(f.p)} P, ${R1(f.c)} K, ${R1(f.f)} F</div>
-  <label>Menge (g oder ml)</label><input id="gr" type="number" inputmode="decimal" value="${g}">
+  <label>Menge</label><div class="row"><input id="gr" type="number" step="any" inputmode="decimal"><select id="un" style="width:auto;min-width:158px"><option value="g">Gramm</option><option value="ml">Milliliter</option>${hasU?`<option value="u">${esc(f.u)}${/\d/.test(f.u)?'':' ('+R(f.ug)+' g)'}</option>`:''}</select></div>
   <label>Mahlzeit</label><select id="ml">${MEALS.map(([k,n])=>`<option value="${k}" ${k===ctx.meal?'selected':''}>${n}</option>`).join('')}</select>
   <div id="prev" style="margin:12px 0;font-weight:700"></div><button data-a="confirm" style="width:100%">Zum Tagebuch hinzufügen</button>${f.dish?'<button class="ghost" data-a="deldish" style="width:100%;margin-top:8px">Gericht löschen</button>':''}`;
-  const up=()=>{const g=+$('#gr').value||0;$('#prev').textContent=`${R(f.k*g/100)} kcal · ${R1(f.p*g/100)} P · ${R1(f.c*g/100)} K · ${R1(f.f*g/100)} F`};
-  $('#gr').addEventListener('input',up);up();
+  const gr=$('#gr'),un=$('#un');let mode='g';
+  let touched=!!(f.q||f.g);
+  if(hasU&&f.q){un.value='u';mode='u';gr.value=f.q}else{un.value=(f.mu==='ml'||(!f.g&&/ml|\bl\)/i.test(f.u||'')))?'ml':'g';mode=un.value;gr.value=f.g||100}
+  const up=()=>{const g=(+gr.value||0)*(un.value==='u'?f.ug:1);$('#prev').textContent=`${R(f.k*g/100)} kcal · ${R1(f.p*g/100)} P · ${R1(f.c*g/100)} K · ${R1(f.f*g/100)} F${un.value==='u'?' · '+R(g)+' g':''}`};
+  gr.addEventListener('input',()=>{touched=true;up()});
+  un.addEventListener('change',()=>{const g=(+gr.value||0)*(mode==='u'?f.ug:1);mode=un.value;
+    if(!touched)gr.value=mode==='u'?1:100;else gr.value=mode==='u'?Math.max(.5,Math.round(g/f.ug*2)/2):R(g);up()});
+  up();
 }
 function custom(code){
   $('#sh').innerHTML=`<div class="row sp"><h2>Eigenes Lebensmittel</h2><button class="x" data-a="back">‹</button></div>
   <label>Name</label><input id="cn"><label>Marke (optional)</label><input id="cb"><div class="mut" style="margin-top:10px">Nährwerte pro 100 g</div>
   <div class="grid"><div><label>kcal</label><input id="ck" type="number" inputmode="decimal"></div><div><label>Eiweiß (g)</label><input id="cp" type="number" inputmode="decimal"></div><div><label>Kohlenhydrate (g)</label><input id="cc" type="number" inputmode="decimal"></div><div><label>Fett (g)</label><input id="cf" type="number" inputmode="decimal"></div></div>
+  <div class="grid"><div><label>Einheit (optional)</label><input id="cu" placeholder="z. B. Stück"></div><div><label>Gramm pro Einheit</label><input id="cg" type="number" inputmode="decimal"></div></div>
   <button data-a="csave" data-code="${esc(code||'')}" style="width:100%;margin-top:14px">Weiter</button>`;
 }
 
@@ -185,12 +345,13 @@ async function startScan(){
 
 // Aktionen
 const A={
-  edit:b=>{const x=day().items.find(i=>String(i.id)===b.dataset.id);if(!x)return;ctx.meal=x.meal;ctx.editId=x.id;$('#add').hidden=false;pick({name:x.name,brand:x.brand,k:x.k/x.g*100,p:x.p/x.g*100,c:x.c/x.g*100,f:x.f/x.g*100,s:0,g:x.g})},
+  edit:b=>{const x=day().items.find(i=>String(i.id)===b.dataset.id);if(!x)return;ctx.meal=x.meal;ctx.editId=x.id;$('#add').hidden=false;pick({name:x.name,brand:x.brand,k:x.k/x.g*100,p:x.p/x.g*100,c:x.c/x.g*100,f:x.f/x.g*100,s:0,g:x.g,u:x.u,ug:x.ug,q:x.q,mu:x.mu})},
+  retry:()=>{const q=$('#q')&&$('#q').value.trim();if(q&&q.length>1)search(q)},
   copy:b=>{const y=new Date(date+'T12:00:00');y.setDate(y.getDate()-1);const L=((S.days[iso(y)]||{}).items||[]).filter(x=>x.meal===b.dataset.m);if(!L.length){toast('Gestern war hier nichts eingetragen.');return}day().items.push(...L.map(x=>({...x,id:Date.now()+Math.random()})));save();render()},
   dish:b=>{const L=day().items.filter(x=>x.meal===b.dataset.m);if(!L.length)return;const n=(prompt('Name des Gerichts?')||'').trim();if(!n)return;const t=totals(L),g=L.reduce((a,x)=>a+x.g,0);
-    S.dishes=[{name:n,brand:'Eigenes Gericht',k:t.k/g*100,p:t.p/g*100,c:t.c/g*100,f:t.f/g*100,s:g,dish:1},...(S.dishes||[]).filter(x=>x.name!==n)];save();toast('Gericht gespeichert: '+n)},
+    S.dishes=[{name:n,brand:'Eigenes Gericht',k:t.k/g*100,p:t.p/g*100,c:t.c/g*100,f:t.f/g*100,s:g,u:'Portion',ug:g,dish:1},...(S.dishes||[]).filter(x=>x.name!==n)];save();toast('Gericht gespeichert: '+n)},
   deldish:()=>{S.dishes=(S.dishes||[]).filter(x=>x.name!==ctx.food.name);save();$('#add').hidden=true;toast('Gericht gelöscht.')},
-  goto:b=>{date=b.dataset.k;tab='diary';render()},
+  goto:b=>{date=b.dataset.k;tab='diary';render();fresh()},
   signup:async()=>{const u=slug($('#lu').value),p=$('#lp').value;if(u.length<2){toast('Bitte einen Namen eingeben (mind. 2 Buchstaben).');return}if(p.length<8){toast('Passwort: mindestens 8 Zeichen.');return}
     const{data,error}=await sb.auth.signUp({email:u+'@killcal.app',password:p});
     if(error){toast(/registered|exists/i.test(error.message)?'Dieser Name ist schon vergeben.':'Registrierung nicht möglich: '+error.message);return}
@@ -199,17 +360,17 @@ const A={
     const{data,error}=await sb.auth.signInWithPassword({email:u+'@killcal.app',password:p});if(error){toast('Anmeldung fehlgeschlagen: Name oder Passwort falsch.');return}enter(data.user)},
   logout:async()=>{try{localStorage.removeItem(KEY())}catch(e){}await sb.auth.signOut();uid=null;S={profile:null,days:{},weights:[],recent:[],dishes:[]};loginView()},
   import:()=>$('#imp').click(),
-  tab:b=>{tab=b.dataset.t;if(!S.profile)tab='profile';render()},
-  day:b=>{const d=new Date(date+'T12:00:00');d.setDate(d.getDate()+ +b.dataset.d);date=iso(d);render()},
+  tab:b=>{tab=b.dataset.t;if(!S.profile)tab='profile';render();fresh()},
+  day:b=>{const d=new Date(date+'T12:00:00');d.setDate(d.getDate()+ +b.dataset.d);date=iso(d);render();fresh()},
   add:b=>openAdd(b.dataset.m),closeadd:()=>{ctx.editId=null;$('#add').hidden=true},back:()=>sheetSearch(),
   del:b=>{const d=day();d.items=d.items.filter(x=>String(x.id)!==b.dataset.id);save();render()},
   water:b=>{const d=day();d.water=Math.max(0,d.water+ +b.dataset.v);save();render()},
   startscan:startScan,closescan:()=>stopScan(),manual:()=>{const c=$('#man').value.trim();if(c){stopScan();lookup(c)}},
   pick:b=>pick(ctx.list[+b.dataset.i]),custom:()=>custom(),
   csave:b=>{const n=$('#cn').value.trim(),k=+$('#ck').value;if(!n||!(k>=0)||$('#ck').value===''){toast('Name und kcal angeben.');return}
-    pick({name:n,brand:$('#cb').value.trim(),k,p:+$('#cp').value||0,c:+$('#cc').value||0,f:+$('#cf').value||0,s:0,code:b.dataset.code})},
-  confirm:()=>{const f=ctx.food,g=+$('#gr').value;if(!(g>0)){toast('Menge eingeben.');return}if(ctx.editId){const d=day();d.items=d.items.filter(x=>String(x.id)!==String(ctx.editId));ctx.editId=null}
-    day().items.push({id:Date.now()+Math.random(),meal:$('#ml').value,name:f.name,brand:f.brand,g,k:R(f.k*g/100),p:R1(f.p*g/100),c:R1(f.c*g/100),f:R1(f.f*g/100)});
+    pick({name:n,brand:$('#cb').value.trim(),k,p:+$('#cp').value||0,c:+$('#cc').value||0,f:+$('#cf').value||0,s:0,u:$('#cu').value.trim(),ug:+$('#cg').value||0,code:b.dataset.code})},
+  confirm:()=>{const f=ctx.food,un=$('#un').value==='u'&&f.ug>0,v=+$('#gr').value,g=un?v*f.ug:v;if(!(g>0)){toast('Menge eingeben.');return}if(ctx.editId){const d=day();d.items=d.items.filter(x=>String(x.id)!==String(ctx.editId));ctx.editId=null}
+    day().items.push({id:Date.now()+Math.random(),meal:$('#ml').value,name:f.name,brand:f.brand,g:R1(g),...(un?{q:v,u:f.u,ug:f.ug}:($('#un').value==='ml'?{mu:'ml'}:{})),k:R(f.k*g/100),p:R1(f.p*g/100),c:R1(f.c*g/100),f:R1(f.f*g/100)});
     if(!f.dish)S.recent=[f,...S.recent.filter(x=>!(x.name===f.name&&x.brand===f.brand))].slice(0,15);save();$('#add').hidden=true;render()},
   wsave:()=>{const w=+$('#wv').value;if(!(w>20&&w<400)){toast('Bitte gültiges Gewicht eingeben.');return}
     S.weights=S.weights.filter(x=>x.d!==date);S.weights.push({d:date,w:R1(w)});if(S.profile)S.profile.w=R1(w);save();render()},
@@ -225,6 +386,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='man')
 const CFG={url:'',key:'',signup:false}; // signup:true zeigt „Konto erstellen“ (nur kurz zum Anlegen der Konten, danach wieder false)
 const slug=v=>v.trim().toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/[^a-z0-9._-]/g,'');   // Project URL und anon/public key – NIE den service_role key!
 let sb=null,uid=null,ts=0,pt,uname='';
+function fresh(){const a=$('#app');a.classList.add('fresh');clearTimeout(fresh.t);fresh.t=setTimeout(()=>a.classList.remove('fresh'),1100)}
 const KEY=()=>'killcal-'+(uid||'local');
 function push(){if(!sb||!uid)return;clearTimeout(pt);pt=setTimeout(async()=>{ts=new Date();const{error}=await sb.from('diary').upsert({user_id:uid,data:S,updated_at:ts.toISOString()});if(error)toast('Sync fehlgeschlagen – bitte Verbindung prüfen.')},800)}
 async function pull(){if(!sb||!uid)return;try{const{data}=await sb.from('diary').select('data,updated_at').eq('user_id',uid).maybeSingle();if(data&&new Date(data.updated_at)>ts){ts=new Date(data.updated_at);S=Object.assign(S,data.data);render()}}catch(e){}}
@@ -239,7 +401,7 @@ async function enter(u){
   ts=rem&&rem.updated_at?new Date(rem.updated_at):0;
   S=Object.assign({profile:null,days:{},weights:[],recent:[],dishes:[]},use);
   if(!S.name&&uname)S.name=uname.charAt(0).toUpperCase()+uname.slice(1);tab=S.profile?'diary':'profile';date=iso(new Date());
-  document.querySelector('nav').style.display='';render();
+  document.querySelector('nav').style.display='';render();fresh();
   if(sb&&rem!==undefined)push();
 }
 async function boot(){
@@ -247,7 +409,8 @@ async function boot(){
     if(!window.supabase){document.querySelector('nav').style.display='none';$('#app').innerHTML='<h1>KillCal</h1><p class="mut">Keine Verbindung. Bitte online öffnen.</p>';return}
     sb=supabase.createClient(CFG.url,CFG.key);const{data}=await sb.auth.getSession();
     if(data.session)enter(data.session.user);else loginView();
-  }else enter(null);
+  }else if(location.protocol==='file:'||/^(localhost|127\.0\.0\.1)$/.test(location.hostname))enter(null);
+  else{document.querySelector('nav').style.display='none';$('#app').innerHTML='<h1 style="margin-top:60px;text-align:center">KillCal</h1><p class="mut" style="text-align:center">Anmeldung noch nicht eingerichtet. Trage Supabase-URL und Key in index.html ein.</p>'}
 }
 window.addEventListener('load',boot);
 </script></body></html>
