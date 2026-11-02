@@ -152,7 +152,7 @@ function vProfile(){
   <label>Eigenes Kalorienziel (leer = automatisch)</label><input id="pCus" type="number" inputmode="numeric" value="${p.custom||''}" placeholder="z. B. 2000">
   <button data-a="psave" style="width:100%;margin-top:14px">Speichern</button></div>
   ${pl?`<div class="card"><b>Dein Tagesziel: ${pl.kcal} kcal</b><div class="mut">Gesamtumsatz ca. ${pl.tdee} kcal · Eiweiß ${pl.prot} g · Kohlenhydrate ${pl.carb} g · Fett ${pl.fat} g${pl.clamped||p.custom?`<br>Hinweis: Das Ziel wird nie unter ${pl.min} kcal gesetzt.`:''}</div></div>
-  <div class="card row" style="flex-wrap:wrap"><button class="sec" data-a="export">Exportieren</button><button class="sec" data-a="import">Importieren</button><input id="imp" type="file" accept="application/json" hidden>${sb?'<button class="sec" data-a="logout">Abmelden</button>':''}<span class="mut" style="width:100%">${sb?'Dein Tagebuch wird mit deinem Konto gesichert und auf allen Geräten angezeigt.':'Lokaler Modus: Daten nur auf diesem Gerät.'}</span></div>`:''}
+  <div class="card row" style="flex-wrap:wrap"><button class="sec" data-a="export">Exportieren</button><button class="sec" data-a="import">Importieren</button><input id="imp" type="file" accept="application/json" hidden><button class="sec" data-a="logout">Abmelden</button><span class="mut" style="width:100%">${sb?'Dein Tagebuch wird mit deinem Konto gesichert und auf allen Geräten angezeigt.':'Die Daten liegen nur auf diesem Gerät. Exportiere sie hin und wieder als Sicherung.'}</span></div>`:''}
   <p class="mut">Richtwerte nach Mifflin-St Jeor, keine medizinische Beratung. Bei Vorerkrankungen, Schwangerschaft oder Essstörungen bitte ärztlichen Rat einholen.</p><p class="mut">Produktdaten: <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener" style="color:var(--acct)">Open Food Facts</a>, © Open Food Facts-Beitragende, Lizenz <a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noopener" style="color:var(--acct)">ODbL</a>. Angaben können fehlerhaft sein. Privates Projekt, keine Gewähr.</p>`;
 }
 
@@ -356,9 +356,10 @@ const A={
     const{data,error}=await sb.auth.signUp({email:u+'@killcal.app',password:p});
     if(error){toast(/registered|exists/i.test(error.message)?'Dieser Name ist schon vergeben.':'Registrierung nicht möglich: '+error.message);return}
     if(!data.session){toast('Konto erstellt. Falls die Anmeldung nicht klappt: In Supabase „Confirm email“ ausschalten.');return}enter(data.user)},
-  login:async()=>{const u=slug($('#lu').value),p=$('#lp').value;if(!u||!p){toast('Benutzername und Passwort eingeben.');return}
+  login:async()=>{const u=slug($('#lu').value),p=$('#lp').value;if(!u||!p){toast('Name und Code eingeben.');return}
+    if(!sb){if(LOCK[u]&&h53('killcal|'+u+'|'+p)===LOCK[u]){try{localStorage.setItem(SESS,u)}catch(e){}enter({id:null,email:u+'@lokal'})}else toast('Name oder Code falsch.');return}
     const{data,error}=await sb.auth.signInWithPassword({email:u+'@killcal.app',password:p});if(error){toast('Anmeldung fehlgeschlagen: Name oder Passwort falsch.');return}enter(data.user)},
-  logout:async()=>{try{localStorage.removeItem(KEY())}catch(e){}await sb.auth.signOut();uid=null;S={profile:null,days:{},weights:[],recent:[],dishes:[]};loginView()},
+  logout:async()=>{if(sb){try{localStorage.removeItem(KEY())}catch(e){}await sb.auth.signOut()}try{localStorage.removeItem(SESS)}catch(e){}uid=null;uname='';S={profile:null,days:{},weights:[],recent:[],dishes:[]};loginView()},
   import:()=>$('#imp').click(),
   tab:b=>{tab=b.dataset.t;if(!S.profile)tab='profile';render();fresh()},
   day:b=>{const d=new Date(date+'T12:00:00');d.setDate(d.getDate()+ +b.dataset.d);date=iso(d);render();fresh()},
@@ -387,12 +388,16 @@ const CFG={url:'',key:'',signup:false}; // signup:true zeigt „Konto erstellen�
 const slug=v=>v.trim().toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/[^a-z0-9._-]/g,'');   // Project URL und anon/public key – NIE den service_role key!
 let sb=null,uid=null,ts=0,pt,uname='';
 function fresh(){const a=$('#app');a.classList.add('fresh');clearTimeout(fresh.t);fresh.t=setTimeout(()=>a.classList.remove('fresh'),1100)}
-const KEY=()=>'killcal-'+(uid||'local');
+const KEY=()=>'killcal-'+(uid||uname||'local');
+// Zugang ohne Server: Namen + Code (nur Sperre der Oberfläche, kein echter Schutz)
+const h53=(str,seed=0)=>{let h1=0xdeadbeef^seed,h2=0x41c6ce57^seed;for(let i=0,ch;i<str.length;i++){ch=str.charCodeAt(i);h1=Math.imul(h1^ch,2654435761);h2=Math.imul(h2^ch,1597334677)}h1=Math.imul(h1^(h1>>>16),2246822507)^Math.imul(h2^(h2>>>13),3266489909);h2=Math.imul(h2^(h2>>>16),2246822507)^Math.imul(h1^(h1>>>13),3266489909);return(4294967296*(2097151&h2)+(h1>>>0)).toString(36)};
+const LOCK={chriss:'l5862oxko8',kianah:'567de7fb8k'};
+const SESS='killcal-session';
 function push(){if(!sb||!uid)return;clearTimeout(pt);pt=setTimeout(async()=>{ts=new Date();const{error}=await sb.from('diary').upsert({user_id:uid,data:S,updated_at:ts.toISOString()});if(error)toast('Sync fehlgeschlagen – bitte Verbindung prüfen.')},800)}
 async function pull(){if(!sb||!uid)return;try{const{data}=await sb.from('diary').select('data,updated_at').eq('user_id',uid).maybeSingle();if(data&&new Date(data.updated_at)>ts){ts=new Date(data.updated_at);S=Object.assign(S,data.data);render()}}catch(e){}}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)pull()});
 document.addEventListener('change',e=>{if(e.target.id!=='imp'||!e.target.files[0])return;e.target.files[0].text().then(t=>{try{const j=JSON.parse(t);if(!j.days)throw 0;S=Object.assign({profile:null,days:{},weights:[],recent:[],dishes:[]},j);save();tab=S.profile?'diary':'profile';render();toast('Import fertig.')}catch(x){toast('Datei nicht lesbar.')}})});
-function loginView(){document.querySelector('nav').style.display='none';$('#app').innerHTML=`<h1 style="text-align:center;margin-top:60px">KillCal</h1><div class="card"><label>Name</label><input id="lu" autocapitalize="words" autocomplete="username"><div class="mut" style="margin-top:6px">Dein Name ist zugleich dein Anmeldename (klein geschrieben).</div><label>Passwort</label><input id="lp" type="password" autocomplete="current-password"><button data-a="login" style="width:100%;margin-top:14px">Anmelden</button>${CFG.signup?'<button class="sec" data-a="signup" style="width:100%;margin-top:8px">Konto erstellen</button>':''}</div>`}
+function loginView(){document.querySelector('nav').style.display='none';$('#app').innerHTML=`<h1 style="text-align:center;margin-top:60px">KillCal</h1><div class="card"><label>Name</label><input id="lu" autocapitalize="words" autocomplete="username"><div class="mut" style="margin-top:6px">${CFG.url?'Dein Name ist zugleich dein Anmeldename (klein geschrieben).':''}</div><label>${CFG.url?'Passwort':'Code'}</label><input id="lp" type="password" inputmode="${CFG.url?'text':'numeric'}" autocomplete="current-password"><button data-a="login" style="width:100%;margin-top:14px">Anmelden</button>${CFG.signup?'<button class="sec" data-a="signup" style="width:100%;margin-top:8px">Konto erstellen</button>':''}</div>`}
 async function enter(u){
   uid=u?u.id:null;uname=u&&u.email?u.email.split('@')[0]:'';let loc={},rem;
   try{loc=JSON.parse(localStorage.getItem(KEY())||'{}')}catch(e){}
@@ -409,8 +414,7 @@ async function boot(){
     if(!window.supabase){document.querySelector('nav').style.display='none';$('#app').innerHTML='<h1>KillCal</h1><p class="mut">Keine Verbindung. Bitte online öffnen.</p>';return}
     sb=supabase.createClient(CFG.url,CFG.key);const{data}=await sb.auth.getSession();
     if(data.session)enter(data.session.user);else loginView();
-  }else if(location.protocol==='file:'||/^(localhost|127\.0\.0\.1)$/.test(location.hostname))enter(null);
-  else{document.querySelector('nav').style.display='none';$('#app').innerHTML='<h1 style="margin-top:60px;text-align:center">KillCal</h1><p class="mut" style="text-align:center">Anmeldung noch nicht eingerichtet. Trage Supabase-URL und Key in index.html ein.</p>'}
+  }else{let u='';try{u=localStorage.getItem(SESS)||''}catch(e){}if(LOCK[u])enter({id:null,email:u+'@lokal'});else loginView()}
 }
 window.addEventListener('load',boot);
 </script></body></html>
